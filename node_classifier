@@ -1,0 +1,72 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+# node_classifier — compute puppet external node definitions (yaml) from a data source
+#
+# Copyright © 2010 martin f. krafft <madduck@madduck.net>
+# Released under the terms of the Artistic Licence 2.0
+#
+__name__ = 'node_classifier'
+__description__ = 'classify nodes based on an external data source'
+__version__ = '2010.07.29.2255'
+__author__ = 'martin f. krafft <madduck@madduck.net>'
+__copyright__ = 'Copyright © 2010 ' + __author__
+__licence__ = 'Artistic Licence 2.0'
+
+import sys, os, posix
+
+from optparse import OptionParser
+parser = OptionParser()
+parser.prog = __name__
+parser.version = __version__
+parser.description = __description__
+parser.usage = '%prog [options] nodename'
+parser.add_option('-t', '--storage-type', dest='storage_type',
+                  default='fs',
+                  help='the type of storage backend to use')
+parser.add_option('-u', '--storage-uri', dest='storage_uri',
+                  help='the URI to pass to the storage backend')
+
+options, args = parser.parse_args()
+
+if len(args) < 1:
+    print >>sys.stderr, 'E: no node name given.'
+    sys.exit(posix.EX_USAGE)
+elif len(args) > 1:
+    print >>sys.stderr, 'E: only one node name can be specified.'
+    sys.exit(posix.EX_USAGE)
+
+def load_storage_backend_module(storage_type):
+    try:
+        m = __import__('storage.' + storage_type, globals(), locals(),
+                       storage_type)
+    except ImportError:
+        return None
+
+    return getattr(m, 'ExternalNodeStorage', None)
+
+backend_module = load_storage_backend_module(options.storage_type)
+if backend_module is None:
+    print >>sys.stderr, 'E: no such storage backend:', options.storage_type
+    sys.exit(posix.EX_CONFIG)
+
+backend = backend_module(options.storage_uri, args[0])
+
+nodedef = {
+    '_hostname'   : args[0],
+    'environment' : backend.get_environment(),
+    'classes'     : backend.get_classes(),
+    'parameters'  : backend.get_parameters(),
+}
+nodedef.update(backend.get_additional_data())
+
+from yaml import load, dump
+try:
+    from yaml import CLoader as Loader
+    from yaml import CDumper as Dumper
+except ImportError:
+    from yaml import Loader, Dumper
+
+print dump(nodedef, default_flow_style=False)
+
+sys.exit(posix.EX_OK)
