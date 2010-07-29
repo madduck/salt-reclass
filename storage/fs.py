@@ -52,7 +52,6 @@ class ExternalNodeStorage(object):
         roles = node_data.get('roles', [])
         for role in roles:
             role_filename = os.path.join(self._role_uri, role)
-            print >>sys.stderr, role_filename
             d = self._load_yaml_file(role_filename)
             #TODO: factor out the merge logic
             ret = self._merge(ret, d)
