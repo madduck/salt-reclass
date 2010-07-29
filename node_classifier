@@ -24,8 +24,11 @@ parser.usage = '%prog [options] nodename'
 parser.add_option('-t', '--storage-type', dest='storage_type',
                   default='fs',
                   help='the type of storage backend to use')
-parser.add_option('-u', '--storage-uri', dest='storage_uri',
-                  help='the URI to pass to the storage backend')
+parser.add_option('-n', '--node-uri', dest='node_uri',
+                  help='the URI to pass to the node storage backend')
+parser.add_option('-r', '--role-uri', dest='role_uri',
+                  default=None,
+                  help='the URI to pass to the role storage backend')
 
 options, args = parser.parse_args()
 
@@ -36,21 +39,28 @@ elif len(args) > 1:
     print >>sys.stderr, 'E: only one node name can be specified.'
     sys.exit(posix.EX_USAGE)
 
-def load_storage_backend_module(storage_type):
+options.role_uri = options.role_uri or options.node_uri
+
+def load_storage_backend_class(storage_type):
     try:
-        m = __import__('storage.' + storage_type, globals(), locals(),
-                       storage_type)
+        mod = 'storage.' + storage_type
+        __import__(mod, globals(), locals(), [], -1)
+        mod = sys.modules[mod]
     except ImportError:
         return None
 
-    return getattr(m, 'ExternalNodeStorage', None)
+    return getattr(mod, 'ExternalNodeStorage', None)
 
-backend_module = load_storage_backend_module(options.storage_type)
-if backend_module is None:
+#backend_class = load_storage_backend_class(options.storage_type)
+#TODO
+exec("from storage.%s import ExternalNodeStorage as backend_class" % options.storage_type)
+
+if backend_class is None:
     print >>sys.stderr, 'E: no such storage backend:', options.storage_type
     sys.exit(posix.EX_CONFIG)
 
-backend = backend_module(options.storage_uri, args[0])
+backend = backend_class(options.node_uri, options.role_uri)
+backend.load_node(args[0])
 
 nodedef = {
     '_hostname'   : args[0],
@@ -60,13 +70,12 @@ nodedef = {
 }
 nodedef.update(backend.get_additional_data())
 
-from yaml import load, dump
+from yaml import dump
 try:
-    from yaml import CLoader as Loader
     from yaml import CDumper as Dumper
 except ImportError:
-    from yaml import Loader, Dumper
+    from yaml import Dumper
 
-print dump(nodedef, default_flow_style=False)
+print dump(nodedef, Dumper=Dumper, default_flow_style=False)
 
 sys.exit(posix.EX_OK)
