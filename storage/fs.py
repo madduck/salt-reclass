@@ -48,8 +48,8 @@ class ExternalNodeStorage(object):
 
         ret = {}
 
-        node_data = load(f, Loader=Loader)
-        roles = node_data.get('roles', [])
+        data = load(f, Loader=Loader)
+        roles = data.get('roles', [])
         for role in roles:
             role_filename = os.path.join(self._role_uri, role)
             d = self._load_yaml_file(role_filename)
@@ -57,7 +57,7 @@ class ExternalNodeStorage(object):
             ret = self._merge(ret, d)
 
         # the node data override/extend everything last
-        return self._merge(ret, node_data)
+        return self._merge(ret, data)
 
     def _merge(self, base, new):
         for kvpair in new.iteritems():
