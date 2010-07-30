@@ -1,12 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
-# yaml_fs.py — class implementing filesystem-based YAML node classification
+# yaml_fs — class implementing filesystem-based YAML node classification
 #
 # Copyright © 2010 martin f. krafft <madduck@madduck.net>
 # Released under the terms of the Artistic Licence 2.0
 #
-__name__ = 'yaml_fs.py'
+__name__ = 'yaml_fs'
 __description__ = 'class implementing filesystem-based YAML node classification'
 __version__ = '2010.07.29.2255'
 __author__ = 'martin f. krafft <madduck@madduck.net>'

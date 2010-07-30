@@ -43,18 +43,14 @@ options.role_uri = options.role_uri or options.node_uri
 
 def load_storage_backend_class(storage_type):
     try:
-        mod = 'storage.' + storage_type
-        __import__(mod, globals(), locals(), [], -1)
-        mod = sys.modules[mod]
+        modname = 'storage.' + storage_type
+        mod = __import__(modname, globals(), locals(), storage_type)
     except ImportError:
         return None
 
     return getattr(mod, 'ExternalNodeStorage', None)
 
-#backend_class = load_storage_backend_class(options.storage_type)
-#TODO
-exec("from storage.%s import ExternalNodeStorage as backend_class" % options.storage_type)
-
+backend_class = load_storage_backend_class(options.storage_type)
 if backend_class is None:
     print >>sys.stderr, 'E: no such storage backend:', options.storage_type
     sys.exit(posix.EX_CONFIG)
