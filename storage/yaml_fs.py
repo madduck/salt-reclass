@@ -15,7 +15,12 @@ __licence__ = 'Artistic Licence 2.0'
 
 import os, sys, posix
 
-from yaml import load
+try:
+    from yaml import load
+except ImportError:
+    print >>sys.stderr, 'E: python-yaml module not found.'
+    sys.exit(posix.EX_OSERR)
+
 try:
     from yaml import CLoader as Loader
 except ImportError:
