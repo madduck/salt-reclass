@@ -66,7 +66,7 @@ nodedef = {
     '_hostname'   : args[0],
     'environment' : backend.get_environment(),
     'classes'     : backend.get_classes(),
-    'parameters'  : backend.get_parameters(),
+    'parameters'  : backend.get_parameters()
 }
 nodedef.update(backend.get_additional_data())
 
