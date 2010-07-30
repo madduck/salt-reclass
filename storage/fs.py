@@ -54,7 +54,6 @@ class ExternalNodeStorage(object):
         for role in roles:
             role_filename = os.path.join(self._role_uri, role)
             d = self._load_yaml_file(role_filename)
-            #TODO: factor out the merge logic
             ret = self._merge(ret, d)
 
         # the node data override/extend everything last
