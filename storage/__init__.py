@@ -15,6 +15,8 @@ __licence__ = 'Artistic Licence 2.0'
 
 DEFAULT_ENVIRONMENT = 'production'
 
+import sys, posix
+
 class ExternalNodeStorageBase(object):
     def __init__(self, node_uri, role_uri):
         if node_uri is None:
