@@ -60,13 +60,31 @@ class ExternalNodeStorage(object):
         return self._merge(ret, data)
 
     def _merge(self, base, new):
-        for kvpair in new.iteritems():
-            if kvpair[0] == 'classes' and base.has_key('classes'):
-                base['classes'].extend(kvpair[1])
-            elif kvpair[0] == 'parameters' and base.has_key('parameters'):
-                base['parameters'].update(kvpair[1])
+        if base is None: return new
+        if new is None: return base
+
+        for key, value in new.iteritems():
+            if key == 'classes' and key in base:
+                # extend the existing list
+                base[key].extend(value)
+                # if base has no such key, we can just let the full list be
+                # copied further down
+
+            elif key == 'parameters' and key in base:
+                # parameters is a dictionary of dictionaries, keyed by class
+                # name (for parametrised classes)
+                for klass, params in value.iteritems():
+                    if klass in base[key]:
+                        base[key][klass].update(params)
+                    else:
+                        base[key][klass] = params
+
+            elif key == 'variables' and key in base:
+                # variables are a simple dictionary
+                base[key].update(value)
+
             else:
-                base[kvpair[0]] = kvpair[1]
+                base[key] = value
 
         return base
 
@@ -77,7 +95,11 @@ class ExternalNodeStorage(object):
         return self._data.get('classes', [])
 
     def get_parameters(self):
-        return self._data.get('parameters', {})
+        ret = self._data.get('variables', {})
+        for klass, params in self._data.get('parameters', {}).iteritems():
+            ret.update([('%s_%s' % (klass, var), val)
+                        for var, val in params.iteritems()])
+        return ret
 
     def get_additional_data(self):
         return {}
