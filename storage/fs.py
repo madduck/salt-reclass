@@ -49,7 +49,8 @@ class ExternalNodeStorage(object):
         ret = {}
 
         data = load(f, Loader=Loader)
-        roles = data.get('roles', [])
+
+        roles = data.pop('roles', [])
         for role in roles:
             role_filename = os.path.join(self._role_uri, role)
             d = self._load_yaml_file(role_filename)
