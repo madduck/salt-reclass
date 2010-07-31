@@ -34,6 +34,7 @@ class ExternalNodeStorage(ExternalNodeStorageBase):
         self._data = self._load_yaml_file(node_filename)
 
     def _load_yaml_file(self, filename):
+        filename += '.yaml'
         try:
             f = open(filename, 'r')
         except IOError, e:
