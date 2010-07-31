@@ -49,6 +49,7 @@ class ExternalNodeStorage(ExternalNodeStorageBase):
             role_filename = os.path.join(self._role_uri, role)
             d = self._load_yaml_file(role_filename)
             ret = self._merge(ret, d)
+            self._roles.append(role)
 
         # the node data override/extend everything last
         return self._merge(ret, data)

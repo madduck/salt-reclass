@@ -29,6 +29,8 @@ class ExternalNodeStorageBase(object):
             sys.exit(posix.EX_USAGE)
         self._role_uri = role_uri
 
+        self._roles = []
+
     def _merge(self, base, new):
         if base is None: return new
         if new is None: return base
@@ -70,6 +72,9 @@ class ExternalNodeStorageBase(object):
             ret.update([('%s_%s' % (klass.replace('::', '_'), var), val)
                         for var, val in params.iteritems()])
         return ret
+
+    def get_roles(self):
+        return self._roles
 
     def get_additional_data(self):
         return {}
