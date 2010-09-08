@@ -64,11 +64,18 @@ metadata = {
     'timestamp'  : time.strftime('%c')
 }
 
+params = backend.get_parameters()
+for key, val in params.iteritems():
+    try:
+        params[key] = val.replace('${nodename}', args[0])
+    except AttributeError, e:
+        continue
+
 nodedef = {
     'METADATA'    : metadata,
     'environment' : backend.get_environment(),
     'classes'     : backend.get_classes(),
-    'parameters'  : backend.get_parameters()
+    'parameters'  : params
 }
 
 nodedef.update(backend.get_additional_data())
