@@ -77,7 +77,7 @@ class ExternalNodeStorageBase(object):
     def get_parameters(self):
         ret = self._data.get('variables', {})
         for klass, params in self._data.get('parameters', {}).iteritems():
-            ret.update([('%s_%s' % (klass.replace('::', '_'), var), val)
+            ret.update([('%s_%s' % (klass.replace('.', '_'), var), val)
                         for var, val in params.iteritems()])
         return ret
 
