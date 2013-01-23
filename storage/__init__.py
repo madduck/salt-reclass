@@ -37,7 +37,7 @@ class ExternalNodeStorageBase(object):
 
         for key, value in new.iteritems():
             try:
-                if key == 'classes' and key in base:
+                if key == 'states' and key in base:
                     if value is None: continue
 
                     # extend the existing list
@@ -49,7 +49,7 @@ class ExternalNodeStorageBase(object):
                     if value is None: continue
 
                     # parameters is a dictionary of dictionaries, keyed by class
-                    # name (for parametrised classes)
+                    # name (for parametrised states)
                     for klass, params in value.iteritems():
                         if klass in base[key]:
                             base[key][klass].update(params)
@@ -71,8 +71,8 @@ class ExternalNodeStorageBase(object):
     def get_environment(self):
         return self._data.get('environment', DEFAULT_ENVIRONMENT)
 
-    def get_classes(self):
-        return self._data.get('classes', [])
+    def get_states(self):
+        return self._data.get('states', [])
 
     def get_parameters(self):
         ret = self._data.get('variables', {})
