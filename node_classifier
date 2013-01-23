@@ -100,6 +100,6 @@ try:
 except ImportError:
     from yaml import Dumper
 
-print dump(nodedef, Dumper=Dumper, default_flow_style=flow_style)
+print dump(nodedef, Dumper=Dumper, default_flow_style=flow_style) % metadata
 
 sys.exit(posix.EX_OK)
