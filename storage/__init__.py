@@ -30,6 +30,7 @@ class ExternalNodeStorageBase(object):
         self._role_uri = role_uri
 
         self._roles = []
+        self._data = {}
 
     def _merge(self, base, new):
         if base is None: return new
@@ -52,8 +53,41 @@ class ExternalNodeStorageBase(object):
                     # name (for parametrised states)
                     for klass, params in value.iteritems():
                         if klass in base[key]:
-                            base[key][klass].update(params)
+                            # the base dictionary already has a key for the
+                            # given state, so we update:
+
+                            # the problem is that list values should be
+                            # extended, dictionary values updated, and only
+                            # non-collection values overwritten:
+
+                            for var, val in params.iteritems():
+                                if var not in base[key][klass]:
+                                    # no such variable exists yet, this is the
+                                    # easy case:
+                                    base[key][klass][var] = val
+                                else:
+                                    # now we use duck typing to try to extend
+                                    # an existing list, update a dictionary,
+                                    # or if both those fail, overwrite:
+                                    try:
+                                        val_tmp = val
+                                        try:
+                                            val.extend([]) #YUCK
+                                        except AttributeError:
+                                            # if the value isn't yet a list,
+                                            # we must turn it into one for the
+                                            # extend() call
+                                            val_tmp = [val]
+                                        base[key][klass][var].extend(val_tmp)
+
+                                    except AttributeError:
+                                        try:
+                                            base[key][klass][var].update(val)
+                                        except AttributeError:
+                                            base[key][klass][var] = val
                         else:
+                            # no existing key in base dictionary, so we can
+                            # just set
                             base[key][klass] = params
 
                 elif key == 'variables' and key in base:
@@ -76,9 +110,7 @@ class ExternalNodeStorageBase(object):
 
     def get_parameters(self):
         ret = self._data.get('variables', {})
-        for klass, params in self._data.get('parameters', {}).iteritems():
-            ret.update([('%s_%s' % (klass.replace('.', '_'), var), val)
-                        for var, val in params.iteritems()])
+        ret.update(self._data.get('parameters', {}))
         return ret
 
     def get_roles(self):

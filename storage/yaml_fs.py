@@ -31,7 +31,7 @@ class ExternalNodeStorage(ExternalNodeStorageBase):
 
     def load_node(self, node):
         node_filename = os.path.join(self._node_uri, node)
-        self._data = self._load_yaml_file(node_filename)
+        self._data.update(self._load_yaml_file(node_filename))
 
     def _load_yaml_file(self, filename):
         filename += '.yaml'
@@ -47,6 +47,7 @@ class ExternalNodeStorage(ExternalNodeStorageBase):
 
         roles = data.pop('roles', [])
         for role in roles:
+            if role in self._roles: continue
             role_filename = os.path.join(self._role_uri, role)
             d = self._load_yaml_file(role_filename)
             ret = self._merge(ret, d)
