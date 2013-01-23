@@ -38,13 +38,23 @@ class ExternalNodeStorageBase(object):
 
         for key, value in new.iteritems():
             try:
-                if key == 'states' and key in base:
+                if key == 'states':
                     if value is None: continue
+                    if key not in base: base[key] = []
 
                     # extend the existing list
-                    base[key].extend(value)
-                    # if base has no such key, we can just let the full list be
-                    # copied further down
+                    # we do not use list.extend() because we want to support
+                    # negating states with the '~' prefix, so:
+                    for newstate in value:
+                        if newstate[0] != '~':
+                            # prevent duplicates:
+                            if newstate not in base[key]:
+                                base[key].append(newstate)
+                        else:
+                            try:
+                                base[key].remove(newstate[1:])
+                            except ValueError:
+                                pass
 
                 elif key == 'parameters' and key in base:
                     if value is None: continue
