@@ -1,0 +1,168 @@
+Date: Wed, 23 Jan 2013 15:36:29 +1300
+From: martin f krafft <madduck@madduck.net>
+To: salt users list <salt-users@googlegroups.com>
+Subject: reclass: external node classification
+Message-ID: <20130123023629.GA3006@fishbowl.rw.madduck.net>
+
+Hey folks,
+
+it's time I write a little about my project reclass, which I have
+been using with Puppet for many years and have now ported to Salt.
+It works, but I don't have Salt deployed yet, so your mileage may
+well vary. Anyway, release early and often, right:
+
+  https://github.com/madduck/salt-reclass
+
+For background, you might want to read
+https://groups.google.com/forum/#!msg/salt-users/R_jgNdYDPk0/E1_5sxoVz3sJ.
+
+The idea of reclass is to allow you to define hosts in
+a hierarchical fashion in one place: roles, states, parameters, it's
+all in one location.
+
+Let me serve you a simple example. I'll step through a couple of
+files, which are kept purposely simple. See if you can see the big
+picture as this unfolds:
+
+    ,---8<---8<--- nodes/red.example.org ---8<---8<---
+    | roles:
+    | - base
+    | - debian@wheezy
+    | - hosted@zurich
+    | - salt.minion
+    | - postfix.satellite
+    | parameters:
+    |   postfix.satellite:
+    |     smtp_relayhost: blue.example.org
+    `----8<---8<---8<---8<---8<---8<---8<---8<---8<----
+
+    ,---8<---8<--- nodes/blue.example.org ---8<---8<---
+    | roles:
+    | - debian@squeeze
+    | - hosted@munich
+    | - salt.minion
+    | - postfix.relay
+    | parameters:
+    |   salt.minion:
+    |     enable_highstate_polling: False
+    `----8<---8<---8<---8<---8<---8<---8<---8<---8<-----
+
+These two hosts both reference a number of roles, and set some
+parameters. Parameters are indexed by the state they influence.
+There are also variables, which are essentially global.
+
+Roles essentially are equivalent files in the roles/ directory, e.g.
+the following role simply inherits from debiannode and defines the
+variable debian_suite to be squeeze. Similar roles exist for the
+other suites…
+
+    ,---8<---8<--- roles/debian@squeeze ---8<---8<---
+    | roles:
+    | - debiannode
+    | variables:
+    |   debian_suite: squeeze
+    `---8<---8<---8<---8<---8<---8<---8<---8<---8<---
+
+Debian nodes inherit from basenode and introduce the 'apt' state:
+
+    ,---8<---8<--- roles/debiannode ---8<---8<---
+    | roles:
+    | - basenode
+    | states:
+    | - apt
+    `---8<---8<---8<---8<---8<---8<---8<---8<----
+
+… and while we are on the subject of APT, the repository URLs are
+injected using roles as well:
+
+    ,---8<---8<--- roles/hosted@munich ---8<---8<---
+    | parameters:
+    |   apt:
+    |     repository_base: http://ftp2.de.debian.org/debian
+    `--8<---8<---8<---8<---8<---8<---8<---8<---8<---
+
+    ,---8<---8<--- roles/hosted@zurich ---8<---8<---
+    | parameters:
+    |   apt:
+    |     repository_base: http://ftp.ch.debian.org/debian
+    `--8<---8<---8<---8<---8<---8<---8<---8<---8<---
+
+In my setup, all nodes deriving from basenode are SSH servers that
+do not permit root logins:
+
+    ,---8<---8<--- roles/basenode ---8<---8<---
+    | roles:
+    | - ssh.server
+    | parameters:
+    |   ssh.server:
+    |     permit_root_login: no
+    `---8<---8<---8<---8<---8<---8<---8<---8<--
+
+But BackupPC clients need to allow root logins for backups. This
+shows how parameters may be overridden, and due to the dependent
+role on ssh.server, the topological sorting is maintained:
+
+    ,---8<---8<--- roles/backuppc.client ---8<---8<---
+    | roles:
+    | - ssh.server
+    | states:
+    | - backuppc.client
+    | parameters:
+    |   ssh.server:
+    |     permit_root_login: without-password
+    `---8<---8<---8<---8<---8<---8<---8<---8<---8<----
+
+Finally, in the node definition above, you saw that also nodes may
+override parameters at will, while the base role (salt.minion in
+this case) can define defaults.
+
+    ,---8<---8<--- roles/salt.minion ---8<---8<---
+    | states:
+    | - salt.minion
+    | parameters:
+    |   salt.minion:
+    |     master: salt.example.org
+    |     enable_highstate_polling: True
+    `--8<---8<---8<---8<---8<---8<---8<---8<---8<-
+
+That's it for this simple example.
+
+When reclass is invoked for a node, it recurses down the hierarchy
+of roles and collects states, parameters and variables, merging them
+all into one big YAML representation of the node.
+
+Salt get access to these data at two points: for a given node name,
+it obtains the list of applicable states via the ext_nodes
+interface. All variables and parameters are provided via pillar.
+
+In the state definitions and associated templates, those data are
+hence available via the pillar object.
+
+The idea here is that state definitions and templates are kept
+completely abstract and parametrised, and that all customisation
+happens in the node and role defintions.
+
+If you like what you just read, you can try it. Obtain the code from
+GitHub (https://github.com/madduck/salt-reclass) and then add the
+following to the master config (adjusting paths accordingly):
+
+master_tops:
+  ext_nodes: /srv/salt/reclass/node_classifier --storage-type=yaml_fs --role-uri=/srv/salt/roles --node-uri=/srv/salt/nodes --output=states
+
+ext_pillar:
+  - cmd_yaml: /srv/salt/reclass/node_classifier --storage-type=yaml_fs --role-uri=/srv/salt/roles --node-uri=/srv/salt/nodes --output=pillar
+
+Currently, cmd_yaml still needs a patch, which I hope won't be the
+case soon. See here
+  https://github.com/saltstack/salt/issues/2276
+
+The current code is pretty quick-n-dirty and could be improved with
+proper object-oriented design — I get dizzy trying to read the merge
+function. Ideally, the code would even reside in Salt proper, where
+error handling could be done a lot better than at the moment. For
+now, however, it does the job.
+
+Make sure salt-master can read the node and role definition files,
+else the script returns nothing and Salt will behave strangely.
+
+Comments, ideas (and patches) welcome…
