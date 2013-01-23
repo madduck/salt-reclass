@@ -29,6 +29,9 @@ parser.add_option('-n', '--node-uri', dest='node_uri',
 parser.add_option('-r', '--role-uri', dest='role_uri',
                   default=None,
                   help='the URI to pass to the role storage backend')
+parser.add_option('-o', '--output', dest='output',
+                  default='full',
+                  help='the information to print (full | states | pillar)')
 
 options, args = parser.parse_args()
 
@@ -37,6 +40,10 @@ if len(args) < 1:
     sys.exit(posix.EX_USAGE)
 elif len(args) > 1:
     print >>sys.stderr, 'E: only one node name can be specified.'
+    sys.exit(posix.EX_USAGE)
+elif options.output not in ('full','states','pillar'):
+    print >>sys.stderr, \
+        'E: invalid output mode, %s not one of full, states, or pillar' % options.output
     sys.exit(posix.EX_USAGE)
 
 options.role_uri = options.role_uri or options.node_uri
@@ -65,18 +72,25 @@ metadata = {
 }
 
 params = backend.get_parameters()
-for key, val in params.iteritems():
-    try:
-        params[key] = val.replace('${nodename}', args[0])
-    except AttributeError, e:
-        continue
+flow_style = False
 
-nodedef = {
-    'METADATA'    : metadata,
-    'environment' : backend.get_environment(),
-    'classes'     : backend.get_classes(),
-    'parameters'  : params
-}
+if options.output == 'full':
+    nodedef = {
+        'METADATA'    : metadata,
+        'environment' : backend.get_environment(),
+        'states'      : backend.get_states(),
+        'parameters'  : params
+    }
+elif options.output == 'states':
+    nodedef = {
+        'METADATA'    : metadata,
+        'environment' : backend.get_environment(),
+        'classes'     : backend.get_states()
+    }
+    flow_style = None
+elif options.output == 'pillar':
+    nodedef = params
+    nodedef['METADATA'] = metadata
 
 nodedef.update(backend.get_additional_data())
 
@@ -86,6 +100,6 @@ try:
 except ImportError:
     from yaml import Dumper
 
-print dump(nodedef, Dumper=Dumper, default_flow_style=False)
+print dump(nodedef, Dumper=Dumper, default_flow_style=flow_style)
 
 sys.exit(posix.EX_OK)
