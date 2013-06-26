@@ -1,3 +1,20 @@
+
+
+  !!! SALT-RECLASS HAS BEEN DEPRECATED !!!
+
+Please switch to using reclass proper, which provides an Adapter for Ansible.
+You can use the same inventory data.
+
+
+
+
+
+
+
+
+
+
+
 Date: Wed, 23 Jan 2013 15:36:29 +1300
 From: martin f krafft <madduck@madduck.net>
 To: salt users list <salt-users@googlegroups.com>
